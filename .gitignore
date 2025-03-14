@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 firebase.ts
+firebase-messaging-sw.js
 
 # Editor directories and files
 .vscode/*
