@@ -11,8 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
-firebase.ts
-firebase-messaging-sw.js
+.env
 
 # Editor directories and files
 .vscode/*

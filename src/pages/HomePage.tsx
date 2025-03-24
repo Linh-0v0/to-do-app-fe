@@ -16,7 +16,7 @@ const HomePage = () => {
       // Wait for the service worker to be ready
       const registration = await navigator.serviceWorker.ready;
       const token = await getToken(messaging, {
-        vapidKey: "BKjIIC5Ago5vUXzlJ4Chp7L8aZTm8191kwlFkHx7tQ933cxqQAr4T1aKzeQJMzs5XNp5nktzH6cP4Va5hn2YFI4",
+        vapidKey: process.env.VAPID_KEY,
         serviceWorkerRegistration: registration, // 🛠 Attach service worker
       });
 
