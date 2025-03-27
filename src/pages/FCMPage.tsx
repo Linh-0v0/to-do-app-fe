@@ -2,14 +2,14 @@ import { useState } from "react";
 import { getToken } from "firebase/messaging";
 import { messaging } from "../../firebase";
 
-const HomePage = () => {
+const FCMPage = () => {
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const requestPermission = async () => {
     try {
       const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
+      if (permission !== "granted") { 
         throw new Error("Notification permission not granted");
       }
 
@@ -21,8 +21,7 @@ const HomePage = () => {
       });
 
       console.log("✅ FCM Token:", token);
-      setFcmToken(token);
-    } catch (err) {
+      setFcmToken(token);    } catch (err) {
       console.error("❌ Error fetching FCM token:", err);
       setError((err as Error).message);
     }
@@ -38,4 +37,4 @@ const HomePage = () => {
   );
 };
 
-export default HomePage;
+export default FCMPage;
