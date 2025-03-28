@@ -5,8 +5,13 @@ import { Button } from "../ui/button";
 import { getInitials } from "@/lib/utils";
 import { Menu, LogOut, Bell, Settings, User as UserIcon } from "lucide-react";
 import { FCMService } from "@/lib/services/fcmService";
+import { cn } from "@/lib/utils";
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+  className?: string;
+}
+
+export const Header: React.FC<HeaderProps> = ({ className }) => {
   const { user, logout, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -33,7 +38,12 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="bg-background border-b py-3 px-4 sticky top-0 z-10">
+    <header
+      className={cn(
+        "bg-background border-b py-3 px-4 sticky top-0 z-10",
+        className
+      )}
+    >
       <div className="container mx-auto flex justify-between items-center">
         <Link to="/" className="text-xl font-bold flex items-center">
           <span className="text-primary">Toodooloo</span>
