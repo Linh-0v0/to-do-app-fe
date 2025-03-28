@@ -298,9 +298,8 @@ const TaskListPage: React.FC = () => {
       {/* Progress Indicator */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2">
         <div className="flex items-center gap-3 px-6 py-3 bg-white rounded-full border shadow-lg">
-          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-            {/* Replace with actual avatar */}
-            <span className="text-sm">🐼</span>
+          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+            <img src="/icons/logo.svg" alt="Logo" className="w-8 h-8" />
           </div>
           <div className="w-32 h-3 bg-gray-200 rounded-full overflow-hidden">
             <div

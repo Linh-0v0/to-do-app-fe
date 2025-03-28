@@ -110,11 +110,22 @@ export const RegisterForm: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-md p-8 space-y-6 bg-card rounded-lg shadow-md">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold">Create an Account</h1>
-        <p className="text-muted-foreground mt-2">
-          Enter your details to create your account
+    <div className="w-full max-w-lg p-8 space-y-6 bg-card rounded-lg shadow-md">
+      <div className="text-center space-y-4">
+        <div className="flex justify-center">
+          <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+            <img
+              src="/icons/logo.svg"
+              alt="Toodooloo Logo"
+              className="w-15 h-15"
+            />
+          </div>
+        </div>
+        <h1 className="text-2xl font-bold">Toodooloo</h1>
+        <p className="text-muted-foreground">
+          Write it down before your brain deletes it.
+          <br />
+          Sign up!
         </p>
       </div>
 
@@ -233,7 +244,7 @@ export const RegisterForm: React.FC = () => {
         </div>
 
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "Creating account..." : "Create Account"}
+          {isLoading ? "Creating account..." : "Sign up"}
         </Button>
       </form>
 
