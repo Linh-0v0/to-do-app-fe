@@ -414,7 +414,7 @@ export const TaskList: React.FC = () => {
             placeholder="Search"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 focus:ring-2 focus:ring-orange-500"
+            className="pl-9 focus:ring-2 focus:ring-orange-500 bg-gray-50 focus:bg-white transition-colors"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -472,8 +472,14 @@ export const TaskList: React.FC = () => {
 
       {/* Edit Task Modal */}
       {editModalOpen && currentTask && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-50 rounded-lg w-full max-w-md mx-4">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={closeEditModal}
+        >
+          <div
+            className="bg-gray-50 rounded-lg w-full max-w-md mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-6">
               <h3 className="text-xl font-medium mb-6">Edit Task</h3>
 
