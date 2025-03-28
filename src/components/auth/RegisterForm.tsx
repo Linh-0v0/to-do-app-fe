@@ -80,6 +80,11 @@ export const RegisterForm: React.FC = () => {
 
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
+      console.log("USER:", user);
+      user.getIdToken().then((idToken) => {
+        console.log("ID TOKEN:", idToken);
+        // ✅ Use this token in Authorization header to test your API
+      });
 
       if (user.uid) {
         // Extract name parts from Google profile if available

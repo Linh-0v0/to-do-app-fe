@@ -58,8 +58,19 @@ export const LoginForm: React.FC = () => {
 
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
+      console.log("USER:", user);
+      user.getIdToken().then((idToken) => {
+        console.log("ID TOKEN:", idToken);
+        // ✅ Use this token in Authorization header to test your API
+      });
 
       if (user.uid) {
+        // Extract name parts from Google profile if available
+        const displayName = user.displayName || "";
+        const nameParts = displayName.split(" ");
+        const firstname = nameParts[0] || "";
+        const lastname =
+          nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
         await loginWithFirebase(user.uid);
         navigate("/tasks");
       } else {
@@ -75,7 +86,7 @@ export const LoginForm: React.FC = () => {
   return (
     <div className="w-full max-w-md p-8 space-y-6 bg-card rounded-lg shadow-md">
       <div className="text-center space-y-4">
-      <div className="flex justify-center">
+        <div className="flex justify-center">
           <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
             <img
               src="/icons/logo.svg"
