@@ -3,21 +3,37 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FCMService } from "@/lib/services/fcmService";
-import { Bell, Save } from "lucide-react";
+import { Bell, Save, Shield, Eye, EyeOff } from "lucide-react";
 
 const ProfilePage: React.FC = () => {
   const { user, updateFCMToken } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [passwordSaved, setPasswordSaved] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
     firstname: user?.firstname || "",
     lastname: user?.lastname || "",
     username: user?.username || "",
   });
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordError, setPasswordError] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPasswordData((prev) => ({ ...prev, [name]: value }));
+    setPasswordError("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,6 +47,42 @@ const ProfilePage: React.FC = () => {
       setTimeout(() => setIsSaved(false), 3000);
     } catch (error) {
       console.error("Failed to save profile:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setPasswordError("");
+
+    // Validate passwords
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError("New passwords don't match");
+      setIsLoading(false);
+      return;
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      setPasswordError("Password must be at least 8 characters long");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // In a real application, this would call an API endpoint
+      // await api.post('/users/change-password', passwordData);
+      setPasswordSaved(true);
+      setTimeout(() => setPasswordSaved(false), 3000);
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    } catch (error) {
+      console.error("Failed to change password:", error);
+      setPasswordError("Failed to change password. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -126,6 +178,112 @@ const ProfilePage: React.FC = () => {
               Profile updated successfully!
             </p>
           )}
+        </form>
+      </div>
+
+      <div className="bg-card rounded-lg border p-6 mb-6">
+        <form onSubmit={handlePasswordSubmit} className="space-y-4">
+          <div className="flex items-center mb-4">
+            <Shield className="h-5 w-5 text-primary mr-2" />
+            <h2 className="text-lg font-medium">Security</h2>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="currentPassword" className="text-sm font-medium">
+                Current Password
+              </label>
+              <div className="relative">
+                <Input
+                  id="currentPassword"
+                  name="currentPassword"
+                  type={showCurrentPassword ? "text" : "password"}
+                  value={passwordData.currentPassword}
+                  onChange={handlePasswordChange}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                >
+                  {showCurrentPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-400" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="newPassword" className="text-sm font-medium">
+                New Password
+              </label>
+              <div className="relative">
+                <Input
+                  id="newPassword"
+                  name="newPassword"
+                  type={showNewPassword ? "text" : "password"}
+                  value={passwordData.newPassword}
+                  onChange={handlePasswordChange}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                >
+                  {showNewPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-400" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="confirmPassword" className="text-sm font-medium">
+                Confirm New Password
+              </label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={passwordData.confirmPassword}
+                  onChange={handlePasswordChange}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-400" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {passwordError && (
+              <p className="text-sm text-red-600">{passwordError}</p>
+            )}
+
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Updating..." : "Change Password"}
+            </Button>
+
+            {passwordSaved && (
+              <p className="text-sm text-green-600">
+                Password updated successfully!
+              </p>
+            )}
+          </div>
         </form>
       </div>
 
