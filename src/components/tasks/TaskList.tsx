@@ -163,13 +163,15 @@ export const TaskList: React.FC = () => {
         repeatType = RepeatType.NONE;
     }
 
+    // Ensure proper date formatting for API
+    // Note: These will be converted to UTC in the task service
     const updatedTask = {
       ...currentTask,
       title: editedTitle,
       description: editedDescription,
       repeatType,
-      dueDate: currentDueDate || undefined,
-      reminder: currentReminder || undefined,
+      dueDate: currentDueDate ? new Date(currentDueDate) : undefined,
+      reminder: currentReminder ? new Date(currentReminder) : undefined,
     };
 
     updateTask(currentTask.id, updatedTask);

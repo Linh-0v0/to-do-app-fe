@@ -6,7 +6,8 @@ import { Task, RepeatType, TaskFormInputs } from "@/lib/types";
 import { useTaskStore } from "@/lib/store/taskStore";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { Calendar, Clock, RotateCcw, Star } from "lucide-react";
+import { Calendar, Clock, RotateCcw, Star, X } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 
 interface TaskFormProps {
   initialData?: Partial<Task>;
@@ -57,16 +58,28 @@ export const TaskForm: React.FC<TaskFormProps> = ({
 
   const priority = watch("priority");
   const repeatType = watch("repeatType");
+  const dueDate = watch("dueDate");
+  const reminder = watch("reminder");
 
   const onSubmit = async (data: TaskFormInputs) => {
     setIsLoading(true);
     setError(null);
 
     try {
+      // Format dates as ISO strings with Z suffix to indicate UTC time
+      const formattedData = {
+        ...data,
+        // Convert dates to ISO strings with Z suffix
+        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
+        reminder: data.reminder ? new Date(data.reminder).toISOString() : undefined,
+        // Filter out any extra fields that might be in the form but not in the API
+        taggedUsers: data.taggedUsers || undefined
+      };
+
       if (isEditing && initialData.id) {
-        await updateTask(initialData.id, data);
+        await updateTask(initialData.id, formattedData);
       } else {
-        await createTask(data);
+        await createTask(formattedData);
       }
 
       if (onSuccess) {
@@ -86,6 +99,14 @@ export const TaskForm: React.FC<TaskFormProps> = ({
 
   const handleRepeatChange = (newRepeatType: RepeatType) => {
     setValue("repeatType", newRepeatType);
+  };
+
+  const clearDueDate = () => {
+    setValue("dueDate", undefined);
+  };
+
+  const clearReminder = () => {
+    setValue("reminder", undefined);
   };
 
   return (
@@ -111,6 +132,37 @@ export const TaskForm: React.FC<TaskFormProps> = ({
           className="text-sm"
           aria-label="Task description"
         />
+      </div>
+
+      {/* Display selected dates and times */}
+      <div className="flex flex-wrap gap-2 mb-1">
+        {dueDate && (
+          <div className="flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
+            <Calendar className="h-3 w-3" />
+            <span>{formatDateTime(dueDate)}</span>
+            <button 
+              type="button"
+              onClick={clearDueDate}
+              className="ml-1 text-blue-700 hover:text-blue-900"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+        
+        {reminder && (
+          <div className="flex items-center gap-1 text-xs bg-yellow-50 text-yellow-700 px-2 py-1 rounded-full">
+            <Clock className="h-3 w-3" />
+            <span>{formatDateTime(reminder)}</span>
+            <button 
+              type="button"
+              onClick={clearReminder}
+              className="ml-1 text-yellow-700 hover:text-yellow-900"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
       </div>
 
       {error && (

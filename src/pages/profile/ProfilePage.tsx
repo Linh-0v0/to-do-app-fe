@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuthStore } from "@/lib/store/authStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FCMService } from "@/lib/services/fcmService";
-import { Bell, Save, Shield, Eye, EyeOff } from "lucide-react";
+import { Bell, Save, Shield, Eye, EyeOff, AlertCircle } from "lucide-react";
 
 const ProfilePage: React.FC = () => {
   const { user, updateFCMToken } = useAuthStore();
@@ -13,6 +13,17 @@ const ProfilePage: React.FC = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [notificationStatus, setNotificationStatus] = useState<{
+    isLoading: boolean;
+    error: string | null;
+    permission: string | null;
+    supported: boolean;
+  }>({
+    isLoading: false,
+    error: null,
+    permission: null,
+    supported: false,
+  });
   const [formData, setFormData] = useState({
     firstname: user?.firstname || "",
     lastname: user?.lastname || "",
@@ -24,6 +35,16 @@ const ProfilePage: React.FC = () => {
     confirmPassword: "",
   });
   const [passwordError, setPasswordError] = useState("");
+
+  useEffect(() => {
+    // Check notification permission status on component mount
+    const { supported, permission } = FCMService.getNotificationStatus();
+    setNotificationStatus(prev => ({
+      ...prev,
+      supported,
+      permission,
+    }));
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -89,17 +110,95 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleEnableNotifications = async () => {
+    setNotificationStatus(prev => ({
+      ...prev,
+      isLoading: true,
+      error: null,
+    }));
+    
     try {
       if (!FCMService.isSupported()) {
-        console.error("Notifications are not supported in this browser");
-        return;
+        throw new Error("Notifications are not supported in this browser");
       }
 
       const token = await FCMService.requestPermissionAndGetToken();
       await updateFCMToken(token);
+      
+      // Update status after success
+      setNotificationStatus(prev => ({
+        ...prev,
+        isLoading: false,
+        permission: 'granted',
+      }));
     } catch (error) {
       console.error("Failed to enable notifications:", error);
+      setNotificationStatus(prev => ({
+        ...prev,
+        isLoading: false,
+        error: error instanceof Error ? error.message : "Failed to enable notifications",
+        // Check if this was a permission denial
+        permission: Notification.permission,
+      }));
     }
+  };
+
+  // Determine the notification button state and message
+  const renderNotificationButton = () => {
+    if (user?.fcmToken) {
+      return (
+        <p className="text-sm text-green-600">
+          ✓ Push notifications are enabled
+        </p>
+      );
+    }
+
+    if (!notificationStatus.supported) {
+      return (
+        <p className="text-sm text-orange-600">
+          <AlertCircle className="h-4 w-4 inline mr-1" />
+          Push notifications are not supported in this browser
+        </p>
+      );
+    }
+
+    if (notificationStatus.permission === 'denied') {
+      return (
+        <div>
+          <p className="text-sm text-red-600 mb-2">
+            <AlertCircle className="h-4 w-4 inline mr-1" />
+            Permission denied. Please enable notifications in your browser settings.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open('about:preferences#privacy', '_blank')}
+          >
+            Open Browser Settings
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleEnableNotifications}
+          disabled={notificationStatus.isLoading}
+        >
+          <Bell className="h-4 w-4 mr-2" />
+          {notificationStatus.isLoading 
+            ? "Enabling..." 
+            : "Enable Push Notifications"}
+        </Button>
+        {notificationStatus.error && (
+          <p className="text-sm text-red-600 mt-2">
+            {notificationStatus.error}
+          </p>
+        )}
+      </>
+    );
   };
 
   return (
@@ -304,20 +403,7 @@ const ProfilePage: React.FC = () => {
               </p>
 
               <div className="mt-2">
-                {user?.fcmToken ? (
-                  <p className="text-sm text-green-600">
-                    ✓ Push notifications are enabled
-                  </p>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleEnableNotifications}
-                  >
-                    <Bell className="h-4 w-4 mr-2" />
-                    Enable Push Notifications
-                  </Button>
-                )}
+                {renderNotificationButton()}
               </div>
             </div>
           </div>

@@ -27,6 +27,7 @@
     "openapi-zod-client": "^1.18.3",
     "postcss": "^8.5.3",
     "react": "^19.0.0",
+    "react-day-picker": "^9.6.3",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.54.2",
     "react-router": "^7.3.0",

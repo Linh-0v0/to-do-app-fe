@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Task, RepeatType } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
 import { useTaskStore } from "@/lib/store/taskStore";
-import { Check, Calendar, Star, Trash } from "lucide-react";
+import { Check, Calendar, Star, Trash, AlertCircle } from "lucide-react";
 
 interface TaskItemProps {
   task: Task;
@@ -17,6 +17,9 @@ export const TaskItem: React.FC<TaskItemProps> = ({
 }) => {
   const { toggleTaskStatus, updateTask, deleteTask } = useTaskStore();
   const [isHovering, setIsHovering] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const getRepeatLabel = (repeatType: RepeatType): string => {
     switch (repeatType) {
@@ -44,7 +47,67 @@ export const TaskItem: React.FC<TaskItemProps> = ({
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    deleteTask(task.id);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    setDeleteError(null);
+    
+    try {
+      await deleteTask(task.id);
+      setShowDeleteConfirm(false);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Failed to delete task");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const cancelDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDeleteConfirm(false);
+    setDeleteError(null);
+  };
+
+  const renderDeleteConfirmation = () => {
+    return (
+      <div
+        className="absolute inset-0 bg-black/20 flex items-center justify-center z-10"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="bg-white p-4 rounded-lg shadow-lg max-w-xs w-full">
+          <h3 className="font-medium mb-2">Delete Task</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Are you sure you want to delete "{task.title}"?
+          </p>
+          
+          {deleteError && (
+            <div className="mb-4 p-2 bg-red-50 text-red-600 text-sm rounded-md flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <span>{deleteError}</span>
+            </div>
+          )}
+          
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={cancelDelete}
+              className="px-3 py-1 text-sm rounded-md bg-gray-100 hover:bg-gray-200"
+              disabled={isDeleting}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="px-3 py-1 text-sm rounded-md bg-red-500 text-white hover:bg-red-600"
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (viewMode === "list") {
@@ -57,6 +120,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
+        {showDeleteConfirm && renderDeleteConfirmation()}
         {isHovering && (
           <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500 rounded-l-lg"></div>
         )}
@@ -123,6 +187,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
+      {showDeleteConfirm && renderDeleteConfirmation()}
       <div className="flex items-start gap-3">
         <button
           onClick={(e) => {
