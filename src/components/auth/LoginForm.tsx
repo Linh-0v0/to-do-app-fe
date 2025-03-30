@@ -58,24 +58,13 @@ export const LoginForm: React.FC = () => {
 
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      console.log("USER:", user);
-      user.getIdToken().then((idToken) => {
-        console.log("ID TOKEN:", idToken);
-        // ✅ Use this token in Authorization header to test your API
-      });
-
-      if (user.uid) {
-        // Extract name parts from Google profile if available
-        const displayName = user.displayName || "";
-        const nameParts = displayName.split(" ");
-        const firstname = nameParts[0] || "";
-        const lastname =
-          nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
-        await loginWithFirebase(user.uid);
-        navigate("/tasks");
-      } else {
-        throw new Error("Failed to authenticate with Firebase");
-      }
+      
+      // Get the Firebase ID token
+      const idToken = await user.getIdToken();
+      
+      // Use the Firebase ID token for authentication
+      await loginWithFirebase(idToken);
+      navigate("/tasks");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Google login failed");
     } finally {

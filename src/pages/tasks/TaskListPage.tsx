@@ -9,11 +9,14 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
+  X,
 } from "lucide-react";
 import { useTaskStore } from "@/lib/store/taskStore";
+import { RepeatType } from "@/lib/types";
+import { formatDateTime } from "@/lib/utils";
 
 const TaskListPage: React.FC = () => {
-  const { tasks } = useTaskStore();
+  const { tasks, createTask } = useTaskStore();
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [showDueDate, setShowDueDate] = useState(false);
   const [showReminder, setShowReminder] = useState(false);
@@ -21,6 +24,12 @@ const TaskListPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState("10:00 AM");
   const [repeatOption, setRepeatOption] = useState("Not repeat");
+  const [taskTitle, setTaskTitle] = useState("");
+  const [taskDescription, setTaskDescription] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [dueDateSelected, setDueDateSelected] = useState<Date | null>(null);
+  const [reminderSelected, setReminderSelected] = useState<Date | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Calculate task completion
@@ -47,6 +56,20 @@ const TaskListPage: React.FC = () => {
   ];
 
   const daysOfWeek = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+  // Reset form fields
+  const resetTaskForm = () => {
+    setTaskTitle("");
+    setTaskDescription("");
+    setShowDueDate(false);
+    setShowReminder(false);
+    setShowRepeatOptions(false);
+    setRepeatOption("Not repeat");
+    setSelectedDate(new Date());
+    setSelectedTime("10:00 AM");
+    setDueDateSelected(null);
+    setReminderSelected(null);
+  };
 
   const handleAddTaskClick = () => {
     setIsAddingTask(true);
@@ -125,6 +148,99 @@ const TaskListPage: React.FC = () => {
     setSelectedDate(newDate);
   };
 
+  const clearDueDate = () => {
+    setDueDateSelected(null);
+  };
+
+  const clearReminder = () => {
+    setReminderSelected(null);
+  };
+
+  const handleCreateTask = async () => {
+    if (!taskTitle.trim()) {
+      return; // Don't create empty tasks
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Map the repeat option string to RepeatType enum
+      let repeatType = RepeatType.NONE;
+      switch (repeatOption) {
+        case "Daily":
+          repeatType = RepeatType.DAILY;
+          break;
+        case "Weekly":
+          repeatType = RepeatType.WEEKLY;
+          break;
+        case "Monthly":
+          repeatType = RepeatType.MONTHLY;
+          break;
+        case "Yearly":
+          repeatType = RepeatType.YEARLY;
+          break;
+      }
+
+      // Format dates as ISO strings with Z suffix to indicate UTC
+      const formattedDueDate = dueDateSelected ? dueDateSelected.toISOString() : undefined;
+      const formattedReminder = reminderSelected ? reminderSelected.toISOString() : undefined;
+
+      // Create the task with the form data using ISO strings with Z suffix
+      await createTask({
+        title: taskTitle,
+        description: taskDescription,
+        status: false,
+        priority: 0,
+        dueDate: formattedDueDate,
+        reminder: formattedReminder,
+        repeatType,
+      });
+
+      // Reset form and close
+      resetTaskForm();
+      setIsAddingTask(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create task");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Helper function to convert 12-hour time to 24-hour format
+  const convertTimeStringTo24Hour = (timeStr: string): string => {
+    const [time, modifier] = timeStr.split(' ');
+    let [hours, minutes] = time.split(':');
+    
+    if (hours === '12') {
+      hours = '00';
+    }
+    
+    if (modifier === 'PM') {
+      hours = (parseInt(hours, 10) + 12).toString();
+    }
+    
+    return `${hours}:${minutes}`;
+  };
+
+  const saveDateTime = (isForDueDate: boolean) => {
+    // Parse the time string and apply it to the selected date
+    const [hours, minutes] = selectedTime.includes('AM') || selectedTime.includes('PM') 
+      ? convertTimeStringTo24Hour(selectedTime).split(':')
+      : selectedTime.split(':');
+    
+    const dateTime = new Date(selectedDate);
+    dateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    
+    if (isForDueDate) {
+      setDueDateSelected(dateTime);
+      setShowDueDate(false);
+    } else {
+      setReminderSelected(dateTime);
+      setShowReminder(false);
+    }
+  };
+
   const renderCalendar = (isForDueDate: boolean) => {
     const days = getDaysInMonth();
     const today = new Date();
@@ -189,18 +305,18 @@ const TaskListPage: React.FC = () => {
         <div className="flex gap-2 mt-4">
           <button
             onClick={() => {
-              setShowDueDate(false);
-              setShowReminder(false);
+              if (isForDueDate) {
+                setShowDueDate(false);
+              } else {
+                setShowReminder(false);
+              }
             }}
             className="py-2 w-1/2 rounded text-gray-700 bg-gray-200 hover:bg-gray-300 transition-colors"
           >
-            Clear
+            Cancel
           </button>
           <button
-            onClick={() => {
-              setShowDueDate(false);
-              setShowReminder(false);
-            }}
+            onClick={() => saveDateTime(isForDueDate)}
             className="py-2 w-1/2 bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors"
           >
             Save
@@ -228,8 +344,45 @@ const TaskListPage: React.FC = () => {
             ref={inputRef}
             placeholder="Add task..."
             className="mb-2 bg-white"
+            value={taskTitle}
+            onChange={(e) => setTaskTitle(e.target.value)}
           />
-          <Input placeholder="Description" className="mb-4 bg-white" />
+          <Input 
+            placeholder="Description" 
+            className="mb-2 bg-white" 
+            value={taskDescription}
+            onChange={(e) => setTaskDescription(e.target.value)}
+          />
+          
+          {/* Display selected dates and times */}
+          <div className="mb-3 flex flex-wrap gap-2">
+            {dueDateSelected && (
+              <div className="flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
+                <Calendar className="h-3 w-3" />
+                <span>{formatDateTime(dueDateSelected)}</span>
+                <button 
+                  onClick={clearDueDate}
+                  className="ml-1 text-blue-700 hover:text-blue-900"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+            
+            {reminderSelected && (
+              <div className="flex items-center gap-1 text-xs bg-yellow-50 text-yellow-700 px-2 py-1 rounded-full">
+                <Bell className="h-3 w-3" />
+                <span>{formatDateTime(reminderSelected)}</span>
+                <button 
+                  onClick={clearReminder}
+                  className="ml-1 text-yellow-700 hover:text-yellow-900"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+          </div>
+          
           <div className="flex items-center gap-3">
             <div className="relative">
               <Button
@@ -280,16 +433,24 @@ const TaskListPage: React.FC = () => {
             <Button
               variant="ghost"
               onClick={() => {
+                resetTaskForm();
                 setIsAddingTask(false);
-                setShowDueDate(false);
-                setShowReminder(false);
-                setShowRepeatOptions(false);
               }}
             >
               Cancel
             </Button>
-            <Button>Enter</Button>
+            <Button 
+              onClick={handleCreateTask}
+              disabled={isLoading}
+            >
+              {isLoading ? "Creating..." : "Enter"}
+            </Button>
           </div>
+          {error && (
+            <div className="mt-2 p-2 rounded-md bg-destructive/10 text-destructive text-sm">
+              {error}
+            </div>
+          )}
         </div>
       )}
 

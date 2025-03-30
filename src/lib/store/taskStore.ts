@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { Task, RepeatType } from "../types";
+import { taskService } from "../services/taskService";
 
 interface TaskState {
   tasks: Task[];
@@ -36,38 +37,8 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   fetchTasks: async () => {
     set({ isLoading: true, error: null });
     try {
-      // Mock implementation - replace with actual API call
-      // const response = await api.get('/tasks');
-      // const { tasks } = response.data;
-
-      // Simulate fetching tasks
-      const mockTasks: Task[] = [
-        {
-          id: "1",
-          userId: "1",
-          title: "Complete project documentation",
-          description:
-            "Write comprehensive documentation for the API endpoints",
-          status: false,
-          priority: 2,
-          dueDate: new Date(Date.now() + 86400000 * 3), // 3 days from now
-          reminder: new Date(Date.now() + 86400000 * 2), // 2 days from now
-          repeatType: RepeatType.NONE,
-        },
-        {
-          id: "2",
-          userId: "1",
-          title: "Weekly team meeting",
-          description: "Discuss project progress and blockers",
-          status: false,
-          priority: 1,
-          dueDate: new Date(Date.now() + 86400000), // 1 day from now
-          reminder: new Date(Date.now() + 86400000 - 3600000), // 1 hour before due date
-          repeatType: RepeatType.WEEKLY,
-        },
-      ];
-
-      set({ tasks: mockTasks, isLoading: false });
+      const tasks = await taskService.getTasks();
+      set({ tasks, isLoading: false });
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : "Failed to fetch tasks",
@@ -83,19 +54,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   createTask: async (task: Omit<Task, "id" | "userId">) => {
     set({ isLoading: true, error: null });
     try {
-      // Mock implementation - replace with actual API call
-      // const response = await api.post('/tasks', task);
-      // const { createdTask } = response.data;
-
-      // Simulate creating a task
-      const mockCreatedTask: Task = {
-        id: Date.now().toString(),
-        userId: "1", // Use actual user ID from auth store in real implementation
-        ...task,
-      };
-
+      const createdTask = await taskService.createTask(task);
       set({
-        tasks: [...get().tasks, mockCreatedTask],
+        tasks: [...get().tasks, createdTask],
         isLoading: false,
       });
     } catch (error) {
@@ -103,19 +64,19 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         error: error instanceof Error ? error.message : "Failed to create task",
         isLoading: false,
       });
+      throw error;
     }
   },
 
   updateTask: async (id: string, taskUpdate: Partial<Task>) => {
     set({ isLoading: true, error: null });
     try {
-      // Mock implementation - replace with actual API call
-      // await api.patch(`/tasks/${id}`, taskUpdate);
+      const updatedTask = await taskService.updateTask(id, taskUpdate);
 
       // Update task in state
       set({
         tasks: get().tasks.map((task) =>
-          task.id === id ? { ...task, ...taskUpdate } : task
+          task.id === id ? updatedTask : task
         ),
         isLoading: false,
       });
@@ -124,14 +85,14 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         error: error instanceof Error ? error.message : "Failed to update task",
         isLoading: false,
       });
+      throw error;
     }
   },
 
   deleteTask: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      // Mock implementation - replace with actual API call
-      // await api.delete(`/tasks/${id}`);
+      await taskService.deleteTask(id);
 
       // Remove task from state
       set({
@@ -139,10 +100,26 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         isLoading: false,
       });
     } catch (error) {
+      console.error("Error deleting task:", error);
+
+      let errorMessage = "Failed to delete task";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (error && typeof error === 'object' && 'response' in error) {
+        // Handle axios error
+        const axiosError = error as any;
+        if (axiosError.response?.data?.message) {
+          errorMessage = axiosError.response.data.message;
+        } else if (axiosError.response?.statusText) {
+          errorMessage = `Server error: ${axiosError.response.statusText}`;
+        }
+      }
+
       set({
-        error: error instanceof Error ? error.message : "Failed to delete task",
+        error: errorMessage,
         isLoading: false,
       });
+      throw error;
     }
   },
 

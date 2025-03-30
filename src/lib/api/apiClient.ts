@@ -43,8 +43,15 @@ apiClient.interceptors.response.use(
       _retry?: boolean;
     };
 
+    // Log the error for debugging
+    console.error('API Error:', error.response?.status, error.response?.data);
+
     // Check if it's a 401 error and not already retrying
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      useAuthStore.getState().refreshTokenValue
+    ) {
       originalRequest._retry = true;
 
       try {
@@ -63,6 +70,21 @@ apiClient.interceptors.response.use(
         useAuthStore.getState().logout();
         return Promise.reject(refreshError);
       }
+    }
+
+    // Create a more descriptive error
+    const errorMessage =
+      error.response?.data?.message ||
+      error.response?.statusText ||
+      error.message ||
+      'Unknown error occurred';
+
+    if (error.response) {
+      error.message = `Server Error (${error.response.status}): ${errorMessage}`;
+    } else if (error.request) {
+      error.message = `No response from server: ${error.message}`;
+    } else {
+      error.message = `Request Error: ${error.message}`;
     }
 
     return Promise.reject(error);

@@ -30,7 +30,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export const RegisterForm: React.FC = () => {
   const navigate = useNavigate();
-  const { registerWithEmailPassword, registerWithFirebase } = useAuthStore();
+  const { registerWithEmailPassword, registerWithFirebase, loginWithFirebase } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,9 +58,9 @@ export const RegisterForm: React.FC = () => {
       await registerWithEmailPassword(
         data.email,
         data.password,
-        data.username,
         data.firstname,
-        data.lastname
+        data.lastname,
+        data.username
       );
       navigate("/tasks");
     } catch (err) {
@@ -80,31 +80,13 @@ export const RegisterForm: React.FC = () => {
 
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      console.log("USER:", user);
-      user.getIdToken().then((idToken) => {
-        console.log("ID TOKEN:", idToken);
-        // ✅ Use this token in Authorization header to test your API
-      });
-
-      if (user.uid) {
-        // Extract name parts from Google profile if available
-        const displayName = user.displayName || "";
-        const nameParts = displayName.split(" ");
-        const firstname = nameParts[0] || "";
-        const lastname =
-          nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
-
-        await registerWithFirebase(
-          user.uid,
-          user.email || "",
-          user.displayName || undefined,
-          firstname || undefined,
-          lastname || undefined
-        );
-        navigate("/tasks");
-      } else {
-        throw new Error("Failed to authenticate with Firebase");
-      }
+      
+      // Get the Firebase ID token
+      const idToken = await user.getIdToken();
+      
+      // Use the Firebase ID token for authentication
+      await loginWithFirebase(idToken);
+      navigate("/tasks");
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Google registration failed"
