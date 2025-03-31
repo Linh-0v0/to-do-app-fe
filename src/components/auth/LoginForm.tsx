@@ -58,13 +58,13 @@ export const LoginForm: React.FC = () => {
 
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-
-      if (user.uid) {
-        await loginWithFirebase(user.uid);
-        navigate("/tasks");
-      } else {
-        throw new Error("Failed to authenticate with Firebase");
-      }
+      
+      // Get the Firebase ID token
+      const idToken = await user.getIdToken();
+      
+      // Use the Firebase ID token for authentication
+      await loginWithFirebase(idToken);
+      navigate("/tasks");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Google login failed");
     } finally {
@@ -74,7 +74,16 @@ export const LoginForm: React.FC = () => {
 
   return (
     <div className="w-full max-w-md p-8 space-y-6 bg-card rounded-lg shadow-md">
-      <div className="text-center">
+      <div className="text-center space-y-4">
+        <div className="flex justify-center">
+          <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+            <img
+              src="/icons/logo.svg"
+              alt="Toodooloo Logo"
+              className="w-15 h-15"
+            />
+          </div>
+        </div>
         <h1 className="text-2xl font-bold">Sign In</h1>
         <p className="text-muted-foreground mt-2">
           Enter your credentials to access your account

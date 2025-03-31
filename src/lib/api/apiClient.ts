@@ -2,6 +2,7 @@ import axios, {
   AxiosError,
   AxiosInstance,
   AxiosRequestConfig,
+  InternalAxiosRequestConfig,
   AxiosResponse,
 } from "axios";
 import { useAuthStore } from "../store/authStore";
@@ -19,7 +20,8 @@ const apiClient: AxiosInstance = axios.create({
 
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
-  (config: AxiosRequestConfig) => {
+  // (config: AxiosRequestConfig) => {
+  (config: InternalAxiosRequestConfig) => {
     const token = useAuthStore.getState().token;
 
     if (token && config.headers) {
@@ -43,8 +45,15 @@ apiClient.interceptors.response.use(
       _retry?: boolean;
     };
 
+    // Log the error for debugging
+    console.error("API Error:", error.response?.status, error.response?.data);
+
     // Check if it's a 401 error and not already retrying
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      useAuthStore.getState().refreshTokenValue
+    ) {
       originalRequest._retry = true;
 
       try {
@@ -59,10 +68,36 @@ apiClient.interceptors.response.use(
 
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // If refresh fails, force logout and redirect to login
-        useAuthStore.getState().logout();
+        // If refresh fails, clear auth state without calling API logout
+        useAuthStore.getState().setUser(null);
+        useAuthStore.getState().setToken(null);
+        useAuthStore.getState().setRefreshToken(null);
+
         return Promise.reject(refreshError);
       }
+    }
+
+    // Create a more descriptive error
+    const errorMessage =
+      error.response?.data &&
+      typeof error.response.data === "object" &&
+      "message" in error.response.data
+        ? error.response.data.message
+        : error.response?.statusText ||
+          error.message ||
+          "Unknown error occurred";
+
+    if (error.response) {
+      // For authentication errors, use a more generic message
+      if (error.response.status === 401) {
+        error.message = "Invalid email or password. Please try again.";
+      } else {
+        error.message = `Server Error (${error.response.status}): ${errorMessage}`;
+      }
+    } else if (error.request) {
+      error.message = `No response from server: ${error.message}`;
+    } else {
+      error.message = `Request Error: ${error.message}`;
     }
 
     return Promise.reject(error);

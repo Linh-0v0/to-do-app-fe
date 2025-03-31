@@ -1,26 +1,20 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { AuthState, User } from "../types";
+import { authService } from "../services/authService";
 
 type AuthStore = AuthState & {
   // Login methods
   loginWithEmailPassword: (email: string, password: string) => Promise<void>;
-  loginWithFirebase: (firebaseUid: string) => Promise<void>;
+  loginWithFirebase: (idToken: string) => Promise<void>;
 
   // Register methods
   registerWithEmailPassword: (
     email: string,
     password: string,
-    username?: string,
     firstname?: string,
-    lastname?: string
-  ) => Promise<void>;
-  registerWithFirebase: (
-    firebaseUid: string,
-    email: string,
-    username?: string,
-    firstname?: string,
-    lastname?: string
+    lastname?: string,
+    username?: string
   ) => Promise<void>;
 
   // Other auth methods
@@ -28,12 +22,21 @@ type AuthStore = AuthState & {
   updateFCMToken: (token: string) => Promise<void>;
   refreshToken: () => Promise<void>;
   changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
+  updateUserProfile: (data: {
+    firstname?: string;
+    lastname?: string;
+    username?: string;
+  }) => Promise<void>;
 
   // State management
   setUser: (user: User | null) => void;
   setToken: (token: string | null) => void;
+  setRefreshToken: (refreshToken: string | null) => void;
   setLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
+
+  // Getters
+  refreshTokenValue: string | null;
 };
 
 export const useAuthStore = create<AuthStore>()(
@@ -42,6 +45,7 @@ export const useAuthStore = create<AuthStore>()(
       // Initial state
       user: null,
       token: null,
+      refreshTokenValue: null,
       isLoading: false,
       isAuthenticated: false,
       error: null,
@@ -50,62 +54,85 @@ export const useAuthStore = create<AuthStore>()(
       loginWithEmailPassword: async (email: string, password: string) => {
         set({ isLoading: true, error: null });
         try {
-          // Mock implementation - replace with actual API call
-          // const response = await api.post('/auth/signin', { email, password });
-          // const { user, token } = response.data;
-
-          // Simulate successful login
-          const mockUser: User = {
-            id: "1",
-            email,
-            createdAt: new Date(),
-          };
-
-          const mockToken = "mock-jwt-token";
-
+          const response = await authService.login(email, password);
           set({
-            user: mockUser,
-            token: mockToken,
+            user: response.user,
+            token: response.token,
+            refreshTokenValue: response.refreshToken,
             isAuthenticated: true,
-            isLoading: false,
           });
+
+          // Fetch complete user profile after authentication
+          try {
+            const userProfile = await authService.getUserProfile();
+            console.log("Fetched user profile:", userProfile);
+
+            // Ensure createdAt is a Date object
+            const formattedProfile = {
+              ...userProfile,
+              createdAt:
+                userProfile.createdAt instanceof Date
+                  ? userProfile.createdAt
+                  : new Date(userProfile.createdAt),
+            };
+
+            set({
+              user: formattedProfile,
+              isLoading: false,
+            });
+          } catch (profileError) {
+            console.error("Failed to fetch user profile:", profileError);
+            set({ isLoading: false });
+          }
         } catch (error) {
           set({
             error: error instanceof Error ? error.message : "Login failed",
             isLoading: false,
           });
+          throw error;
         }
       },
 
-      loginWithFirebase: async (firebaseUid: string) => {
+      loginWithFirebase: async (idToken: string) => {
         set({ isLoading: true, error: null });
         try {
-          // Mock implementation - replace with actual API call
-          // const response = await api.post('/auth/firebase-signin', { firebaseUid });
-          // const { user, token } = response.data;
-
-          // Simulate successful login
-          const mockUser: User = {
-            id: "1",
-            firebaseUid,
-            email: "firebase-user@example.com",
-            createdAt: new Date(),
-          };
-
-          const mockToken = "mock-firebase-jwt-token";
-
+          const response = await authService.googleLogin(idToken);
           set({
-            user: mockUser,
-            token: mockToken,
+            user: response.user,
+            token: response.token,
+            refreshTokenValue: response.refreshToken,
             isAuthenticated: true,
-            isLoading: false,
           });
+
+          // Fetch complete user profile after authentication
+          try {
+            const userProfile = await authService.getUserProfile();
+            console.log("Fetched user profile:", userProfile);
+
+            // Ensure createdAt is a Date object
+            const formattedProfile = {
+              ...userProfile,
+              createdAt:
+                userProfile.createdAt instanceof Date
+                  ? userProfile.createdAt
+                  : new Date(userProfile.createdAt),
+            };
+
+            set({
+              user: formattedProfile,
+              isLoading: false,
+            });
+          } catch (profileError) {
+            console.error("Failed to fetch user profile:", profileError);
+            set({ isLoading: false });
+          }
         } catch (error) {
           set({
             error:
               error instanceof Error ? error.message : "Firebase login failed",
             isLoading: false,
           });
+          throw error;
         }
       },
 
@@ -113,87 +140,55 @@ export const useAuthStore = create<AuthStore>()(
       registerWithEmailPassword: async (
         email: string,
         password: string,
-        username?: string,
         firstname?: string,
-        lastname?: string
+        lastname?: string,
+        username?: string
       ) => {
         set({ isLoading: true, error: null });
         try {
-          // Mock implementation - replace with actual API call
-          // const response = await api.post('/auth/signup', {
-          //   email, password, username, firstname, lastname
-          // });
-          // const { user, token } = response.data;
-
-          // Simulate successful registration
-          const mockUser: User = {
-            id: "1",
+          const response = await authService.register(
             email,
-            username,
+            password,
             firstname,
             lastname,
-            createdAt: new Date(),
-          };
-
-          const mockToken = "mock-jwt-token";
-
+            username
+          );
           set({
-            user: mockUser,
-            token: mockToken,
+            user: response.user,
+            token: response.token,
+            refreshTokenValue: response.refreshToken,
             isAuthenticated: true,
-            isLoading: false,
           });
+
+          // Fetch complete user profile after authentication
+          try {
+            const userProfile = await authService.getUserProfile();
+            console.log("Fetched user profile:", userProfile);
+
+            // Ensure createdAt is a Date object
+            const formattedProfile = {
+              ...userProfile,
+              createdAt:
+                userProfile.createdAt instanceof Date
+                  ? userProfile.createdAt
+                  : new Date(userProfile.createdAt),
+            };
+
+            set({
+              user: formattedProfile,
+              isLoading: false,
+            });
+          } catch (profileError) {
+            console.error("Failed to fetch user profile:", profileError);
+            set({ isLoading: false });
+          }
         } catch (error) {
           set({
             error:
               error instanceof Error ? error.message : "Registration failed",
             isLoading: false,
           });
-        }
-      },
-
-      registerWithFirebase: async (
-        firebaseUid: string,
-        email: string,
-        username?: string,
-        firstname?: string,
-        lastname?: string
-      ) => {
-        set({ isLoading: true, error: null });
-        try {
-          // Mock implementation - replace with actual API call
-          // const response = await api.post('/auth/firebase-signup', {
-          //   firebaseUid, email, username, firstname, lastname
-          // });
-          // const { user, token } = response.data;
-
-          // Simulate successful registration
-          const mockUser: User = {
-            id: "1",
-            firebaseUid,
-            email,
-            username,
-            firstname,
-            lastname,
-            createdAt: new Date(),
-          };
-
-          const mockToken = "mock-firebase-jwt-token";
-
-          set({
-            user: mockUser,
-            token: mockToken,
-            isAuthenticated: true,
-            isLoading: false,
-          });
-        } catch (error) {
-          set({
-            error:
-              error instanceof Error
-                ? error.message
-                : "Firebase registration failed",
-            isLoading: false,
-          });
+          throw error;
         }
       },
 
@@ -201,19 +196,19 @@ export const useAuthStore = create<AuthStore>()(
       logout: async () => {
         set({ isLoading: true });
         try {
-          // Mock implementation - replace with actual API call
-          // await api.post('/auth/logout');
-
+          await authService.logout();
+        } catch (error) {
+          console.error("Logout API error:", error);
+          // Continue with logout even if API fails
+        } finally {
+          // Always clear local state regardless of API success
           set({
             user: null,
             token: null,
+            refreshTokenValue: null,
             isAuthenticated: false,
             isLoading: false,
-          });
-        } catch (error) {
-          set({
-            error: error instanceof Error ? error.message : "Logout failed",
-            isLoading: false,
+            error: null,
           });
         }
       },
@@ -226,13 +221,19 @@ export const useAuthStore = create<AuthStore>()(
 
         set({ isLoading: true, error: null });
         try {
-          // Mock implementation - replace with actual API call
-          // await api.patch('/auth/update-fcm-token', { fcmToken: token });
-
-          set({
-            user: get().user ? { ...get().user, fcmToken: token } : null,
-            isLoading: false,
-          });
+          await authService.updateFcmToken(token);
+          const currentUser = get().user;
+          if (currentUser) {
+            set({
+              user: {
+                ...currentUser,
+                fcmToken: token,
+              },
+              isLoading: false,
+            });
+          } else {
+            set({ isLoading: false });
+          }
         } catch (error) {
           set({
             error:
@@ -241,26 +242,35 @@ export const useAuthStore = create<AuthStore>()(
                 : "Updating FCM token failed",
             isLoading: false,
           });
+          throw error;
         }
       },
 
       refreshToken: async () => {
         set({ isLoading: true, error: null });
         try {
-          // Mock implementation - replace with actual API call
-          // const response = await api.post('/auth/refresh-token');
-          // const { token } = response.data;
+          const refreshToken = get().refreshTokenValue;
+          if (!refreshToken) {
+            // Just set not loading and return instead of throwing
+            set({ isLoading: false });
+            return;
+          }
 
-          const mockToken = "mock-refreshed-jwt-token";
-
-          set({ token: mockToken, isLoading: false });
+          const response = await authService.refreshToken(refreshToken);
+          set({
+            token: response.token,
+            refreshTokenValue: response.refreshToken,
+            isLoading: false,
+          });
         } catch (error) {
           set({
             error:
               error instanceof Error ? error.message : "Token refresh failed",
             isLoading: false,
             token: null,
+            refreshTokenValue: null,
             isAuthenticated: false,
+            user: null,
           });
         }
       },
@@ -273,9 +283,7 @@ export const useAuthStore = create<AuthStore>()(
 
         set({ isLoading: true, error: null });
         try {
-          // Mock implementation - replace with actual API call
-          // await api.post('/auth/change-password', { oldPassword, newPassword });
-
+          await authService.changePassword(oldPassword, newPassword);
           set({ isLoading: false });
         } catch (error) {
           set({
@@ -283,20 +291,65 @@ export const useAuthStore = create<AuthStore>()(
               error instanceof Error ? error.message : "Password change failed",
             isLoading: false,
           });
+          throw error;
         }
       },
 
-      // State management
-      setUser: (user) => set({ user, isAuthenticated: !!user }),
-      setToken: (token) => set({ token, isAuthenticated: !!token }),
-      setLoading: (isLoading) => set({ isLoading }),
-      setError: (error) => set({ error }),
+      updateUserProfile: async (data: {
+        firstname?: string;
+        lastname?: string;
+        username?: string;
+      }) => {
+        if (!get().isAuthenticated) {
+          set({ error: "Not authenticated" });
+          return;
+        }
+
+        set({ isLoading: true, error: null });
+        try {
+          await authService.updateUserProfile(data);
+          const currentUser = get().user;
+          if (currentUser) {
+            set({
+              user: {
+                ...currentUser,
+                ...data,
+              },
+              isLoading: false,
+            });
+          } else {
+            set({ isLoading: false });
+          }
+        } catch (error) {
+          set({
+            error:
+              error instanceof Error
+                ? error.message
+                : "Updating user profile failed",
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
+      // State setters
+      setUser: (user: User | null) => set({ user }),
+      setToken: (token: string | null) =>
+        set({
+          token,
+          isAuthenticated: !!token,
+        }),
+      setRefreshToken: (refreshToken: string | null) =>
+        set({ refreshTokenValue: refreshToken }),
+      setLoading: (isLoading: boolean) => set({ isLoading }),
+      setError: (error: string | null) => set({ error }),
     }),
     {
-      name: "todo-auth-storage",
+      name: "auth-storage",
       partialize: (state) => ({
         user: state.user,
         token: state.token,
+        refreshTokenValue: state.refreshTokenValue,
         isAuthenticated: state.isAuthenticated,
       }),
     }

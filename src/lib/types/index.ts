@@ -35,8 +35,8 @@ export type Task = {
   description?: string;
   status: boolean;
   priority: number;
-  dueDate?: Date;
-  reminder?: Date;
+  dueDate?: Date | string;
+  reminder?: Date | string;
   jobKey?: string;
   repeatType: RepeatType;
   taggedUsers?: TaskTaggedUser[];
@@ -87,7 +87,7 @@ export type TaskFormInputs = {
   dueDate?: Date | string;
   reminder?: Date | string;
   repeatType: RepeatType;
-  taggedUsers?: string[];
+  taggedUsers?: TaskTaggedUser[];
 };
 
 /**
