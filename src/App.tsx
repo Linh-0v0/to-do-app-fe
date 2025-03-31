@@ -12,7 +12,6 @@ import RegisterPage from "./pages/auth/RegisterPage";
 // Pages
 import TaskListPage from "./pages/tasks/TaskListPage";
 import ProfilePage from "./pages/profile/ProfilePage";
-import AboutPage from "./pages/AboutPage";
 
 const App: React.FC = () => {
   const routes = useRoutes([
@@ -35,7 +34,6 @@ const App: React.FC = () => {
           children: [
             { path: "/tasks", element: <TaskListPage /> },
             { path: "/profile", element: <ProfilePage /> },
-            { path: "about", element: <AboutPage /> },
             { path: "", element: <Navigate to="/tasks" replace /> },
           ],
         },
