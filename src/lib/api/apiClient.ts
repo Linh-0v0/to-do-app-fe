@@ -20,7 +20,6 @@ const apiClient: AxiosInstance = axios.create({
 
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
-  // (config: AxiosRequestConfig) => {
   (config: InternalAxiosRequestConfig) => {
     const token = useAuthStore.getState().token;
 

@@ -32,8 +32,8 @@ A task management application built with React, TypeScript, and Vite. This front
 
 ### User Interface
 
-- Modern, responsive design with Tailwind CSS
-- Intuitive task creation and editing
+- Responsive design with Tailwind CSS
+- Task creation and editing
 - Profile management section
 - Toast notifications for user feedback
 - Date and time pickers for scheduling
@@ -68,6 +68,7 @@ A task management application built with React, TypeScript, and Vite. This front
 Create a `.env` file in the root directory with the following variables:
 
 ```
+VITE_API_URL=http://localhost:3000
 VITE_FIREBASE_API_KEY=your_firebase_api_key
 VITE_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
 VITE_FIREBASE_PROJECT_ID=your_firebase_project_id
@@ -150,4 +151,3 @@ The build output will be in the `dist` directory.
 ├── vite.config.ts       # Vite configuration
 └── README.md            # Project documentation
 ```
-

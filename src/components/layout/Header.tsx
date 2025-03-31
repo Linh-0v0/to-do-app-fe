@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/lib/store/authStore";
 import { Button } from "../ui/button";
 import { getInitials } from "@/lib/utils";
-import { Menu, LogOut, Bell, Settings, User as UserIcon, AlertCircle } from "lucide-react";
+import { Menu, LogOut, Bell, User as UserIcon, AlertCircle } from "lucide-react";
 import { FCMService } from "@/lib/services/fcmService";
 import { cn } from "@/lib/utils";
 
