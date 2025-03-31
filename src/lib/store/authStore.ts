@@ -22,6 +22,11 @@ type AuthStore = AuthState & {
   updateFCMToken: (token: string) => Promise<void>;
   refreshToken: () => Promise<void>;
   changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
+  updateUserProfile: (data: {
+    firstname?: string;
+    lastname?: string;
+    username?: string;
+  }) => Promise<void>;
 
   // State management
   setUser: (user: User | null) => void;
@@ -65,14 +70,15 @@ export const useAuthStore = create<AuthStore>()(
             // Ensure createdAt is a Date object
             const formattedProfile = {
               ...userProfile,
-              createdAt: userProfile.createdAt instanceof Date
-                ? userProfile.createdAt
-                : new Date(userProfile.createdAt)
+              createdAt:
+                userProfile.createdAt instanceof Date
+                  ? userProfile.createdAt
+                  : new Date(userProfile.createdAt),
             };
 
             set({
               user: formattedProfile,
-              isLoading: false
+              isLoading: false,
             });
           } catch (profileError) {
             console.error("Failed to fetch user profile:", profileError);
@@ -106,14 +112,15 @@ export const useAuthStore = create<AuthStore>()(
             // Ensure createdAt is a Date object
             const formattedProfile = {
               ...userProfile,
-              createdAt: userProfile.createdAt instanceof Date
-                ? userProfile.createdAt
-                : new Date(userProfile.createdAt)
+              createdAt:
+                userProfile.createdAt instanceof Date
+                  ? userProfile.createdAt
+                  : new Date(userProfile.createdAt),
             };
 
             set({
               user: formattedProfile,
-              isLoading: false
+              isLoading: false,
             });
           } catch (profileError) {
             console.error("Failed to fetch user profile:", profileError);
@@ -161,14 +168,15 @@ export const useAuthStore = create<AuthStore>()(
             // Ensure createdAt is a Date object
             const formattedProfile = {
               ...userProfile,
-              createdAt: userProfile.createdAt instanceof Date
-                ? userProfile.createdAt
-                : new Date(userProfile.createdAt)
+              createdAt:
+                userProfile.createdAt instanceof Date
+                  ? userProfile.createdAt
+                  : new Date(userProfile.createdAt),
             };
 
             set({
               user: formattedProfile,
-              isLoading: false
+              isLoading: false,
             });
           } catch (profileError) {
             console.error("Failed to fetch user profile:", profileError);
@@ -189,19 +197,19 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true });
         try {
           await authService.logout();
+        } catch (error) {
+          console.error("Logout API error:", error);
+          // Continue with logout even if API fails
+        } finally {
+          // Always clear local state regardless of API success
           set({
             user: null,
             token: null,
             refreshTokenValue: null,
             isAuthenticated: false,
             isLoading: false,
+            error: null,
           });
-        } catch (error) {
-          set({
-            error: error instanceof Error ? error.message : "Logout failed",
-            isLoading: false,
-          });
-          throw error;
         }
       },
 
@@ -219,9 +227,9 @@ export const useAuthStore = create<AuthStore>()(
             set({
               user: {
                 ...currentUser,
-                fcmToken: token
+                fcmToken: token,
               },
-              isLoading: false
+              isLoading: false,
             });
           } else {
             set({ isLoading: false });
@@ -243,7 +251,9 @@ export const useAuthStore = create<AuthStore>()(
         try {
           const refreshToken = get().refreshTokenValue;
           if (!refreshToken) {
-            throw new Error("No refresh token available");
+            // Just set not loading and return instead of throwing
+            set({ isLoading: false });
+            return;
           }
 
           const response = await authService.refreshToken(refreshToken);
@@ -254,14 +264,14 @@ export const useAuthStore = create<AuthStore>()(
           });
         } catch (error) {
           set({
-            error: error instanceof Error ? error.message : "Token refresh failed",
+            error:
+              error instanceof Error ? error.message : "Token refresh failed",
             isLoading: false,
             token: null,
             refreshTokenValue: null,
             isAuthenticated: false,
             user: null,
           });
-          throw error;
         }
       },
 
@@ -278,9 +288,44 @@ export const useAuthStore = create<AuthStore>()(
         } catch (error) {
           set({
             error:
+              error instanceof Error ? error.message : "Password change failed",
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
+      updateUserProfile: async (data: {
+        firstname?: string;
+        lastname?: string;
+        username?: string;
+      }) => {
+        if (!get().isAuthenticated) {
+          set({ error: "Not authenticated" });
+          return;
+        }
+
+        set({ isLoading: true, error: null });
+        try {
+          await authService.updateUserProfile(data);
+          const currentUser = get().user;
+          if (currentUser) {
+            set({
+              user: {
+                ...currentUser,
+                ...data,
+              },
+              isLoading: false,
+            });
+          } else {
+            set({ isLoading: false });
+          }
+        } catch (error) {
+          set({
+            error:
               error instanceof Error
                 ? error.message
-                : "Password change failed",
+                : "Updating user profile failed",
             isLoading: false,
           });
           throw error;

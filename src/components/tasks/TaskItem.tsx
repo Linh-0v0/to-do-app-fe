@@ -3,6 +3,7 @@ import { Task, RepeatType } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
 import { useTaskStore } from "@/lib/store/taskStore";
 import { Check, Calendar, Star, Trash, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 
 interface TaskItemProps {
   task: Task;
@@ -53,12 +54,16 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   const confirmDelete = async () => {
     setIsDeleting(true);
     setDeleteError(null);
-    
+
     try {
       await deleteTask(task.id);
       setShowDeleteConfirm(false);
+      toast.success(`Task "${task.title}" deleted successfully`);
     } catch (error) {
-      setDeleteError(error instanceof Error ? error.message : "Failed to delete task");
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to delete task";
+      setDeleteError(errorMessage);
+      toast.error(`Error: ${errorMessage}`);
     } finally {
       setIsDeleting(false);
     }
@@ -81,14 +86,14 @@ export const TaskItem: React.FC<TaskItemProps> = ({
           <p className="text-sm text-gray-600 mb-4">
             Are you sure you want to delete "{task.title}"?
           </p>
-          
+
           {deleteError && (
             <div className="mb-4 p-2 bg-red-50 text-red-600 text-sm rounded-md flex items-start gap-2">
               <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
               <span>{deleteError}</span>
             </div>
           )}
-          
+
           <div className="flex justify-end gap-2">
             <button
               onClick={cancelDelete}
