@@ -3,15 +3,19 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/lib/store/authStore";
 
 export const ProtectedRoute: React.FC = () => {
-  const { isAuthenticated, isLoading, refreshToken } = useAuthStore();
+  const { isAuthenticated, isLoading, refreshToken, refreshTokenValue } =
+    useAuthStore();
   const location = useLocation();
 
   useEffect(() => {
-    // If not authenticated, try to refresh token once
-    if (!isAuthenticated && !isLoading) {
-      refreshToken();
+    // Only try to refresh token if we have a refresh token value
+    // and we're not authenticated
+    if (!isAuthenticated && !isLoading && refreshTokenValue) {
+      refreshToken().catch(() => {
+        // Silent catch to prevent unhandled promise rejection
+      });
     }
-  }, [isAuthenticated, isLoading, refreshToken]);
+  }, [isAuthenticated, isLoading, refreshToken, refreshTokenValue]);
 
   // While authentication is being checked, show nothing or a loading indicator
   if (isLoading) {

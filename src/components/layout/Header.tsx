@@ -144,15 +144,6 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                         <UserIcon className="h-4 w-4 mr-2 text-muted-foreground" />
                         Your Profile
                       </Link>
-
-                      <Link
-                        to="/settings"
-                        className="flex items-center px-4 py-2 text-sm hover:bg-accent cursor-pointer"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <Settings className="h-4 w-4 mr-2 text-muted-foreground" />
-                        Settings
-                      </Link>
                     </div>
 
                     <div className="py-1">

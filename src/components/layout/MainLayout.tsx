@@ -8,6 +8,24 @@ export const MainLayout: React.FC = () => {
     // Set up FCM message listener
     FCMService.setupMessageListener((payload) => {
       console.log("Received FCM message:", payload);
+
+      // Display a notification for foreground messages
+      if (Notification.permission === "granted" && payload.notification) {
+        const { title, body } = payload.notification;
+
+        // Create and show the notification
+        const notification = new Notification(title || "Task Reminder", {
+          body: body || "You have a task",
+          icon: "/icons/logo.jpg",
+          data: payload.data,
+        });
+
+        // Handle notification click
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
+      }
     });
   }, []);
 

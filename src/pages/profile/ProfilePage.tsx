@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FCMService } from "@/lib/services/fcmService";
 import { Bell, Save, Shield, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 
 const ProfilePage: React.FC = () => {
-  const { user, updateFCMToken } = useAuthStore();
+  const { user, updateFCMToken, updateUserProfile, changePassword } =
+    useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [passwordSaved, setPasswordSaved] = useState(false);
@@ -39,7 +41,7 @@ const ProfilePage: React.FC = () => {
   useEffect(() => {
     // Check notification permission status on component mount
     const { supported, permission } = FCMService.getNotificationStatus();
-    setNotificationStatus(prev => ({
+    setNotificationStatus((prev) => ({
       ...prev,
       supported,
       permission,
@@ -62,12 +64,13 @@ const ProfilePage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // In a real application, this would call an API endpoint
-      // await api.patch('/users/me', formData);
+      await updateUserProfile(formData);
       setIsSaved(true);
+      toast.success("Profile updated successfully!");
       setTimeout(() => setIsSaved(false), 3000);
     } catch (error) {
       console.error("Failed to save profile:", error);
+      toast.error("Failed to update profile. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -81,20 +84,25 @@ const ProfilePage: React.FC = () => {
     // Validate passwords
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setPasswordError("New passwords don't match");
+      toast.error("New passwords don't match. Please try again.");
       setIsLoading(false);
       return;
     }
 
     if (passwordData.newPassword.length < 8) {
       setPasswordError("Password must be at least 8 characters long");
+      toast.error("Password must be at least 8 characters long.");
       setIsLoading(false);
       return;
     }
 
     try {
-      // In a real application, this would call an API endpoint
-      // await api.post('/users/change-password', passwordData);
+      await changePassword(
+        passwordData.currentPassword,
+        passwordData.newPassword
+      );
       setPasswordSaved(true);
+      toast.success("Password changed successfully!");
       setTimeout(() => setPasswordSaved(false), 3000);
       setPasswordData({
         currentPassword: "",
@@ -103,19 +111,29 @@ const ProfilePage: React.FC = () => {
       });
     } catch (error) {
       console.error("Failed to change password:", error);
-      setPasswordError("Failed to change password. Please try again.");
+      if (error instanceof Error) {
+        setPasswordError(error.message);
+        if (error.message.includes("Incorrect old password")) {
+          toast.error("Incorrect current password. Please try again.");
+        } else {
+          toast.error(error.message);
+        }
+      } else {
+        setPasswordError("Failed to change password. Please try again.");
+        toast.error("Failed to change password. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleEnableNotifications = async () => {
-    setNotificationStatus(prev => ({
+    setNotificationStatus((prev) => ({
       ...prev,
       isLoading: true,
       error: null,
     }));
-    
+
     try {
       if (!FCMService.isSupported()) {
         throw new Error("Notifications are not supported in this browser");
@@ -123,19 +141,22 @@ const ProfilePage: React.FC = () => {
 
       const token = await FCMService.requestPermissionAndGetToken();
       await updateFCMToken(token);
-      
+
       // Update status after success
-      setNotificationStatus(prev => ({
+      setNotificationStatus((prev) => ({
         ...prev,
         isLoading: false,
-        permission: 'granted',
+        permission: "granted",
       }));
     } catch (error) {
       console.error("Failed to enable notifications:", error);
-      setNotificationStatus(prev => ({
+      setNotificationStatus((prev) => ({
         ...prev,
         isLoading: false,
-        error: error instanceof Error ? error.message : "Failed to enable notifications",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to enable notifications",
         // Check if this was a permission denial
         permission: Notification.permission,
       }));
@@ -161,17 +182,18 @@ const ProfilePage: React.FC = () => {
       );
     }
 
-    if (notificationStatus.permission === 'denied') {
+    if (notificationStatus.permission === "denied") {
       return (
         <div>
           <p className="text-sm text-red-600 mb-2">
             <AlertCircle className="h-4 w-4 inline mr-1" />
-            Permission denied. Please enable notifications in your browser settings.
+            Permission denied. Please enable notifications in your browser
+            settings.
           </p>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.open('about:preferences#privacy', '_blank')}
+            onClick={() => window.open("about:preferences#privacy", "_blank")}
           >
             Open Browser Settings
           </Button>
@@ -188,8 +210,8 @@ const ProfilePage: React.FC = () => {
           disabled={notificationStatus.isLoading}
         >
           <Bell className="h-4 w-4 mr-2" />
-          {notificationStatus.isLoading 
-            ? "Enabling..." 
+          {notificationStatus.isLoading
+            ? "Enabling..."
             : "Enable Push Notifications"}
         </Button>
         {notificationStatus.error && (
@@ -402,9 +424,7 @@ const ProfilePage: React.FC = () => {
                 using the app
               </p>
 
-              <div className="mt-2">
-                {renderNotificationButton()}
-              </div>
+              <div className="mt-2">{renderNotificationButton()}</div>
             </div>
           </div>
         </div>
